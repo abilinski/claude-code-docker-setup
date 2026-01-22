@@ -459,7 +459,7 @@ Here's a summary of all four combinations:
 - Changes happen directly to your files
 - No confirmation prompts
 
-**Best for:** Batch processing, but **make sure you have backups**
+**Best for:** Probably don't do this, and if you do, **make sure you have backups**
 
 ---
 
