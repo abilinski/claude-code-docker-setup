@@ -78,7 +78,7 @@ If you install Claude Code directly on your computer:
 
 Claude Code has a permission system, but it's important to understand its limitations:
 
-**Read access:** By default, Claude Code can read any file your user account can read — including files outside your project folder — often without prompting. As one security researcher noted: "It has read permission to any file that the user running claude code has permission to, and it might be able to add the content of the file to the current context without prompting." ([Source: Pete Freitag's security analysis](https://www.petefreitag.com/blog/claude-code-permissions/))
+**Read access:** By default, Claude Code can read any file your user account can read — including files outside your project folder — often without prompting. As one security researcher noted: "It has read permission to any file that the user running Claude Code has permission to, and it might be able to add the content of the file to the current context without prompting." ([Source: Pete Freitag's security analysis](https://www.petefreitag.com/blog/claude-code-permissions/))
 
 **Write access:** Claude Code defaults to "read-only until approval" and will ask before editing files. However, the official documentation notes that "Write access restriction: Claude Code can only write to the folder where it was started and its subfolders" — but this only applies to the Edit tool, not to bash commands. ([Source: Anthropic Security Documentation](https://docs.anthropic.com/en/docs/claude-code/security))
 
