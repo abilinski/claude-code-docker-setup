@@ -1,0 +1,43 @@
+services:
+  claude:
+    build: .
+    image: claude-code-docker
+    
+    # Interactive terminal
+    stdin_open: true
+    tty: true
+    
+    volumes:
+      # Your project files (read-write so Claude can modify them)
+      - ./project:/workspace
+      
+      # Claude Code authentication (persists between runs)
+      - ./auth/claude:/home/claude/.claude
+      
+      # Claude config file (critical for skipping onboarding!)
+      - ./auth/claude.json:/home/claude/.claude.json
+      
+      # GitHub CLI authentication
+      - ./auth/gh:/home/claude/.config/gh
+      
+      # SSH keys for GitHub (if using SSH)
+      - ./auth/ssh:/home/claude/.ssh:ro
+      
+      # Git config
+      - ./auth/gitconfig:/home/claude/.gitconfig:ro
+    
+    environment:
+      # Git identity
+      - GIT_AUTHOR_NAME=eli_the_cat
+      - GIT_AUTHOR_EMAIL=eli_the_cat@users.noreply.github.com
+      - GIT_COMMITTER_NAME=eli_the_cat
+      - GIT_COMMITTER_EMAIL=eli_the_cat@users.noreply.github.com
+    
+    # Run Claude Code autonomously
+    command: >
+      bash -c "
+        git config --global user.name 'eli_the_cat' &&
+        git config --global user.email 'eli_the_cat@users.noreply.github.com' &&
+        git config --global --add safe.directory /workspace &&
+        claude --dangerously-skip-permissions
+      "
