@@ -27,7 +27,7 @@
 
 ## What Is This?
 
-**Claude Code** is an AI assistant that can read, write, and run code. Think of it as having a very capable research assistant who can:
+**Claude Code** is an AI assistant that can read, write, and run code. Think of it as having a very capable (but at times unpredictable) research assistant who can:
 
 - Analyze data files
 - Write and fix code
