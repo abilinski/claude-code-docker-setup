@@ -69,7 +69,7 @@ If you install Claude Code directly on your computer:
 │   │                                                     │   │
 │   └─────────────────────────────────────────────────────┘   │
 │                                                             │
-│   ⚠️  AI has broad access to your system                    │
+│   [!!] AI has broad access to your system                   │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
