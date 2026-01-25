@@ -51,12 +51,15 @@ if [[ "$1" == http* ]] || [[ "$1" == git@* ]]; then
         CLONE_CMD="git clone $REPO_URL /workspace"
     fi
     
-    docker run -it --rm \
+    # Create outputs folder if it doesn't exist
+    mkdir -p "$SCRIPT_DIR/outputs"
+    
+    docker run -it --rm --entrypoint "" \
         -v "$SCRIPT_DIR/auth/claude":/home/claude/.claude \
         -v "$SCRIPT_DIR/auth/claude.json":/home/claude/.claude.json \
         -v "$SCRIPT_DIR/auth/gh":/home/claude/.config/gh \
         -v "$SCRIPT_DIR/auth/ssh":/home/claude/.ssh:ro \
-        -v "$SCRIPT_DIR/auth/gitconfig":/home/claude/.gitconfig:ro \
+        -v "$SCRIPT_DIR/outputs":/home/claude/outputs \
         -e GIT_AUTHOR_NAME=eli_the_cat \
         -e GIT_AUTHOR_EMAIL=eli_the_cat@users.noreply.github.com \
         -e GIT_COMMITTER_NAME=eli_the_cat \
@@ -66,11 +69,12 @@ if [[ "$1" == http* ]] || [[ "$1" == git@* ]]; then
         bash -c "
             git config --global user.name 'eli_the_cat' &&
             git config --global user.email 'eli_the_cat@users.noreply.github.com' &&
+            gh auth setup-git &&
             echo 'Cloning repository...' &&
             $CLONE_CMD &&
             cd /workspace &&
             echo '' &&
-            claude --dangerously-skip-permissions -p \"$PROMPT\"
+            claude --dangerously-skip-permissions --verbose \"$PROMPT\"
         "
 else
     # Local path mode
@@ -107,10 +111,10 @@ else
         -v "$SCRIPT_DIR/auth/claude.json":/home/claude/.claude.json \
         -v "$SCRIPT_DIR/auth/gh":/home/claude/.config/gh \
         -v "$SCRIPT_DIR/auth/ssh":/home/claude/.ssh:ro \
-        -v "$SCRIPT_DIR/auth/gitconfig":/home/claude/.gitconfig:ro \
         -e GIT_AUTHOR_NAME=eli_the_cat \
         -e GIT_AUTHOR_EMAIL=eli_the_cat@users.noreply.github.com \
         -e GIT_COMMITTER_NAME=eli_the_cat \
+        -e GH_CONFIG_DIR=/home/claude/.config/gh \
         -e GIT_COMMITTER_EMAIL=eli_the_cat@users.noreply.github.com \
         -e CLAUDE_CODE_OAUTH_TOKEN="$(cat "$SCRIPT_DIR/auth/oauth_token" 2>/dev/null || echo '')" \
         claude-code-docker \
@@ -118,7 +122,7 @@ else
             git config --global user.name 'eli_the_cat' &&
             git config --global user.email 'eli_the_cat@users.noreply.github.com' &&
             git config --global --add safe.directory /workspace &&
-            claude --dangerously-skip-permissions -p \"$PROMPT\"
+            claude --dangerously-skip-permissions --verbose \"$PROMPT\"
         "
 fi
 

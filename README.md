@@ -4,7 +4,7 @@
 >
 > **How this was made:** This guide and setup were largely generated with Claude Opus 4.5 through conversation. You can customize the specifications for your own needs, but it took some wrangling and debugging to get the authentication working reliably — sharing in case it saves others time.
 >
-> **Why this guide?** There are plenty of Docker + Claude Code setups on the internet, many aimed at professional software developers. This guide is hopefully right-sized for academics: enough isolation to protect sensitive research data, pre-installed packages you actually use (R with fixest, tidyverse, etc.), and straightforward scripts that don't require DevOps expertise to understand.
+> **Why this guide?** There are plenty of Docker + Claude Code setups on the internet, many aimed at professional software developers. This guide is hopefully right-sized for academics: enough isolation to protect sensitive research data, pre-installed packages you likely use (R with fixest, tidyverse, etc.), and straightforward scripts that don't require DevOps expertise to understand.
 >
 > **Just want the essentials?** See [QUICKSTART.md](QUICKSTART.md) for a condensed reference with just the commands and configuration details.
 
@@ -27,7 +27,7 @@
 
 ## What Is This?
 
-**Claude Code** is an AI assistant that can read, write, and run code. Think of it as having a very capable research assistant who can:
+**Claude Code** is an AI assistant that can read, write, and run code. Think of it as having a very capable (but at times unpredictable) research assistant who can:
 
 - Analyze data files
 - Write and fix code
@@ -69,20 +69,20 @@ If you install Claude Code directly on your computer:
 │   │                                                     │   │
 │   └─────────────────────────────────────────────────────┘   │
 │                                                             │
-│   ⚠️  AI has broad access to your system                    │
+│   [!!] AI has broad access to your system                   │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-#### How Local Permissions Actually Work
+#### How Local Permissions Work
 
 Claude Code has a permission system, but it's important to understand its limitations:
 
-**Read access:** By default, Claude Code can read any file your user account can read — including files outside your project folder — often without prompting. As one security researcher noted: "It has read permission to any file that the user running claude code has permission to, and it might be able to add the content of the file to the current context without prompting." ([Source: Pete Freitag's security analysis](https://www.petefreitag.com/blog/claude-code-permissions/))
+**Read access:** By default, Claude Code can read any file your user account can read — including files outside your project folder — often without prompting. As one security researcher noted: "It has read permission to any file that the user running Claude Code has permission to, and it might be able to add the content of the file to the current context without prompting." ([Source: Pete Freitag's security analysis](https://www.petefreitag.com/blog/claude-code-permissions/))
 
 **Write access:** Claude Code defaults to "read-only until approval" and will ask before editing files. However, the official documentation notes that "Write access restriction: Claude Code can only write to the folder where it was started and its subfolders" — but this only applies to the Edit tool, not to bash commands. ([Source: Anthropic Security Documentation](https://docs.anthropic.com/en/docs/claude-code/security))
 
-**The practical reality:**
+**What happens:**
 - Claude will typically *ask* before writing or executing commands
 - But read operations on sensitive files (like `.env` files or SSH keys) may happen silently
 - Permission deny rules have had bugs and may not work as expected
@@ -95,31 +95,31 @@ Claude Code has a permission system, but it's important to understand its limita
 With Docker, Claude Code runs in an isolated container:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     YOUR COMPUTER                           │
-│                                                             │
-│   Your files:               The container:                  │
-│   ┌───────────────┐        ┌───────────────────────────┐   │
-│   │ Documents     │        │   DOCKER CONTAINER        │   │
-│   │ Downloads     │        │                           │   │
-│   │ Photos        │   🚫   │   Claude Code runs here   │   │
-│   │ Other repos   │◄──────►│                           │   │
-│   │ SSH keys      │ blocked│   Can ONLY see:           │   │
-│   │ Passwords     │        │   • Files you share       │   │
-│   │ Email         │        │   • GitHub credentials    │   │
-│   └───────────────┘        │     (that you provide)    │   │
-│                            │   • Internet (for GitHub) │   │
-│   Only what you                                         │   │
-│   explicitly share: ──────────────────┐                 │   │
-│   ┌───────────────┐                   │                 │   │
-│   │ One project   │   mounted    │   │                 │   │
-│   │ folder        │──────────────┼───►                 │   │
-│   └───────────────┘              ▼                     │   │
-│                            └───────────────────────────┘   │
-│                                                             │
-│   ✅ AI only sees what you explicitly give it               │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
++---------------------------------------------------------------------+
+|                          YOUR COMPUTER                              |
+|                                                                     |
+|   Your files:                      The container:                   |
+|   +------------------+             +--------------------------+     |
+|   | Documents        |             |    DOCKER CONTAINER      |     |
+|   | Downloads        |             |                          |     |
+|   | Photos           |     X       |  Claude Code runs here   |     |
+|   | Other repos      |   BLOCKED   |                          |     |
+|   | SSH keys         |             |  Can ONLY see:           |     |
+|   | Passwords        |             |  - Files you share       |     |
+|   | Email            |             |  - GitHub credentials    |     |
+|   +------------------+             |    (that you provide)    |     |
+|                                    |  - Internet (for GitHub) |     |
+|                                    |                          |     |
+|   Only what you                    |                          |     |
+|   explicitly share:                |                          |     |
+|   +------------------+   MOUNTED   |                          |     |
+|   | One project      |============>|                          |     |
+|   | folder           |             |                          |     |
+|   +------------------+             +--------------------------+     |
+|                                    |                          |     |
+|   [OK] AI only sees what you explicitly give it                     |
+|                                                                     |
++---------------------------------------------------------------------+
 ```
 
 ### Why This Matters for Researchers
@@ -362,7 +362,7 @@ claude-docker-setup/
 ./run.sh ~/Documents/my-project
 ```
 
-**⚠️ Warning:** In local mode, Claude modifies your actual files. Make sure you have backups or use version control.
+**⚠️ Warning:** In local mode, Claude modifies your files. Make sure you have backups or use version control.
 
 ---
 
@@ -459,7 +459,7 @@ Here's a summary of all four combinations:
 - Changes happen directly to your files
 - No confirmation prompts
 
-**Best for:** Batch processing, but **make sure you have backups**
+**Best for:** Probably don't do this, and if you do, **make sure you have backups**
 
 ---
 
@@ -613,6 +613,125 @@ pip install new_package
 Note: These installations disappear when the container stops. To make them permanent, you'd need to edit the Dockerfile.
 
 ---
+
+## Some additional notes on Docker
+
+### Building the Docker Image
+
+If you need to rebuild the Docker image (e.g., after modifying the Dockerfile):
+
+```bash
+cd ~/Documents/claude-docker-setup-v2
+docker build --no-cache -t claude-code-docker . 2>&1 | tee build.log
+```
+
+The `--no-cache` flag ensures a fresh build. The build takes 15-30 minutes due to R package compilation.
+
+To verify the build succeeded:
+
+```bash
+docker run --rm claude-code-docker claude --version
+```
+
+---
+
+### Accessing the Docker Container Directly
+
+Sometimes you need to access the container's shell without going through Claude Code (e.g., to debug, install packages, or run commands manually).
+
+#### Option 1: Start a shell instead of Claude
+
+```bash
+docker run -it --rm \
+    -v "$PWD/auth/claude":/home/claude/.claude \
+    -v "$PWD/auth/gh":/home/claude/.config/gh \
+    claude-code-docker \
+    bash
+```
+
+#### Option 2: Open a second terminal into a running container
+
+First, find the container ID:
+
+```bash
+docker ps
+```
+
+Then connect to it:
+
+```bash
+docker exec -it <container-id> bash
+```
+
+**Important:** Don't use Ctrl+Z to background Docker - this suspends the container and can cause issues. Instead, open a new terminal window and use `docker exec`.
+
+---
+
+### Outputs Folder
+
+The `outputs/` folder provides a way to save files from inside Docker to your Mac. This is useful for saving figures, reports, or any files you want to see while working, but you can eliminate this if needed for security on your computer. (Claude Code remains running only in the container.)
+
+**How it works:**
+
+| Location | Path |
+|----------|------|
+| Inside Docker | `/home/claude/outputs/` or `~/outputs/` |
+| On your Mac | `~/Documents/claude-docker-setup-v2/outputs/` |
+
+Files saved to `~/outputs/` inside the container automatically appear in your local `outputs/` folder.
+
+**Example usage:**
+
+```
+You: Create a scatterplot of this data and save it
+
+Claude: [creates plot, saves to ~/outputs/figure1.png]
+
+→ Check your local outputs/ folder - figure1.png is there
+```
+
+**Tip:** Tell Claude Code to save figures and exports to `~/outputs/`:
+
+```
+"Save all figures to ~/outputs/"
+"Export the results to ~/outputs/results.csv"
+```
+
+**Note:** The outputs folder is only mounted in GitHub mode. In local mode, you're working directly with your project files, so save anywhere in your project.
+
+---
+
+### Viewing Web UIs (Frontend Development)
+
+The run scripts expose ports 3000, 5173, and 8080 for web development. When Claude Code starts a development server inside Docker, you can view it in your Mac's browser.
+
+**Workflow:**
+
+1. Ask Claude Code to create a web app (React, Vue, HTML, etc.)
+2. Claude starts the dev server (e.g., `npm run dev`)
+3. Open your browser to `http://localhost:3000` (or 5173/8080 depending on the framework)
+
+**Common ports:**
+
+| Port | Frameworks |
+|------|------------|
+| 3000 | React (Create React App), Next.js, Express |
+| 5173 | Vite (React, Vue, Svelte) |
+| 8080 | General web servers, Vue CLI |
+
+**Example:**
+
+```
+You: Create a UI for a model export.
+
+Claude: [creates app, runs npm run dev]
+Claude: Dev server running at http://localhost:5173
+
+→ Open http://localhost:5173 in Safari/Chrome on your Mac
+```
+
+The browser connects through Docker's port mapping - you see the app running inside Docker, displayed in your real browser with full DevTools access.
+
 
 ## Troubleshooting
 
@@ -811,3 +930,5 @@ pip install new_package
 ```
 
 **Note:** Runtime installations disappear when the container stops. To make packages permanent, you would need to edit the Dockerfile and rebuild the image.
+
+

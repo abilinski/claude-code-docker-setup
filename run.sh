@@ -39,12 +39,18 @@ if [[ "$1" == http* ]] || [[ "$1" == git@* ]]; then
         CLONE_CMD="git clone $REPO_URL /workspace"
     fi
     
+    # Create outputs folder if it doesn't exist
+    mkdir -p "$SCRIPT_DIR/outputs"
+    
     docker run -it --rm \
+        -p 3000:3000 \
+        -p 5173:5173 \
+        -p 8080:8080 \
         -v "$SCRIPT_DIR/auth/claude":/home/claude/.claude \
         -v "$SCRIPT_DIR/auth/claude.json":/home/claude/.claude.json \
         -v "$SCRIPT_DIR/auth/gh":/home/claude/.config/gh \
         -v "$SCRIPT_DIR/auth/ssh":/home/claude/.ssh:ro \
-        -v "$SCRIPT_DIR/auth/gitconfig":/home/claude/.gitconfig:ro \
+        -v "$SCRIPT_DIR/outputs":/home/claude/outputs \
         -e GIT_AUTHOR_NAME=eli_the_cat \
         -e GIT_AUTHOR_EMAIL=eli_the_cat@users.noreply.github.com \
         -e GIT_COMMITTER_NAME=eli_the_cat \
@@ -59,6 +65,7 @@ if [[ "$1" == http* ]] || [[ "$1" == git@* ]]; then
             cd /workspace &&
             echo '' &&
             echo 'Ready! Repository cloned. Changes will be pushed to GitHub.' &&
+            echo 'Figures saved to ~/outputs/ will appear in your local outputs/ folder.' &&
             echo '' &&
             claude
         "
@@ -67,9 +74,9 @@ else
     PROJECT_PATH="$1"
     
     # Convert to absolute path
-    PROJECT_PATH=$(cd "$PROJECT_PATH" 2>/dev/null && pwd || echo "$PROJECT_PATH")
-    
-    if [ ! -d "$PROJECT_PATH" ]; then
+    if [ -d "$PROJECT_PATH" ]; then
+        PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd)"
+    else
         echo "Error: Directory not found: $PROJECT_PATH"
         exit 1
     fi
@@ -82,12 +89,14 @@ else
     echo ""
     
     docker run -it --rm \
-        -v "$PROJECT_PATH":/workspace \
-        -v "$SCRIPT_DIR/auth/claude":/home/claude/.claude \
-        -v "$SCRIPT_DIR/auth/claude.json":/home/claude/.claude.json \
-        -v "$SCRIPT_DIR/auth/gh":/home/claude/.config/gh \
-        -v "$SCRIPT_DIR/auth/ssh":/home/claude/.ssh:ro \
-        -v "$SCRIPT_DIR/auth/gitconfig":/home/claude/.gitconfig:ro \
+        -p 3000:3000 \
+        -p 5173:5173 \
+        -p 8080:8080 \
+        -v "$PROJECT_PATH:/workspace" \
+        -v "$SCRIPT_DIR/auth/claude:/home/claude/.claude" \
+        -v "$SCRIPT_DIR/auth/claude.json:/home/claude/.claude.json" \
+        -v "$SCRIPT_DIR/auth/gh:/home/claude/.config/gh" \
+        -v "$SCRIPT_DIR/auth/ssh:/home/claude/.ssh:ro" \
         -e GIT_AUTHOR_NAME=eli_the_cat \
         -e GIT_AUTHOR_EMAIL=eli_the_cat@users.noreply.github.com \
         -e GIT_COMMITTER_NAME=eli_the_cat \
