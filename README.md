@@ -20,8 +20,12 @@
 6. [Putting It Together: Four Workflows](#putting-it-together-four-workflows)
 7. [Working with Git and GitHub](#working-with-git-and-github)
 8. [Running Multiple Projects at Once](#running-multiple-projects-at-once)
-9. [What Software Is Available](#what-software-is-available)
-10. [Troubleshooting](#troubleshooting)
+9. [Managing Containers](#managing-containers)
+10. [Outputs Folder](#outputs-folder)
+11. [Viewing Web UIs (Frontend Development)](#viewing-web-uis-frontend-development)
+12. [Building the Docker Image](#building-the-docker-image)
+13. [What Software Is Available](#what-software-is-available)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -560,6 +564,196 @@ Each command opens a separate container. You can run several at the same time in
 ./run-autonomous.sh https://github.com/you/project-c "Run tests"
 ```
 
+**Note on ports:** If you're using web UIs (see [Viewing Web UIs](#viewing-web-uis-frontend-development)), each container needs different ports. Use the `-p` flag to offset ports:
+
+```bash
+# Terminal 1 — default ports (3000, 5173, 8080)
+./run.sh https://github.com/you/project-a
+
+# Terminal 2 — shifted ports (3001, 5174, 8081)
+./run.sh -p 1 https://github.com/you/project-b
+
+# Terminal 3 — shifted ports (3002, 5175, 8082)
+./run.sh -p 2 https://github.com/you/project-c
+```
+
+Then open `localhost:3000` for the first project, `localhost:3001` for the second, etc.
+
+---
+
+## Managing Containers
+
+### Stopping a Container
+
+When you're done, type `/exit` in Claude Code or press Ctrl+D. This cleanly shuts down the container.
+
+If a container is stuck or you need to stop it from outside:
+
+```bash
+# See what's running
+docker ps
+
+# Stop a specific container
+docker stop <container-id>
+
+# Stop ALL running containers
+docker stop $(docker ps -q)
+```
+
+**⚠️ Don't use Ctrl+Z.** Pressing Ctrl+Z in Terminal doesn't stop Docker — it *suspends* the process, which leaves the container running in the background and keeps ports locked up. If you accidentally do this, you'll get "port already allocated" errors next time you try to start a container. Fix it by stopping the orphaned container:
+
+```bash
+docker stop $(docker ps -q)
+```
+
+### Accessing the Container Directly
+
+Sometimes you need to get inside the container without going through Claude Code — for example, to debug something, install a package manually, or run a command.
+
+**Option 1: Start a shell instead of Claude**
+
+This launches the container with a bash prompt instead of Claude Code:
+
+```bash
+docker run -it --rm \
+    -v "$PWD/auth/claude":/home/claude/.claude \
+    -v "$PWD/auth/gh":/home/claude/.config/gh \
+    claude-code-docker \
+    bash
+```
+
+You'll get a regular Linux command line inside the container.
+
+**Option 2: Open a second terminal into a running container**
+
+If Claude Code is already running and you want a second window:
+
+1. Open a new Terminal window
+2. Find the container ID:
+   ```bash
+   docker ps
+   ```
+3. Connect to it:
+   ```bash
+   docker exec -it <container-id> bash
+   ```
+
+This gives you a shell alongside the running Claude Code session.
+
+---
+
+## Outputs Folder
+
+The `outputs/` folder provides a way to save files from inside Docker to your Mac. This is useful for saving figures, reports, or any files you want to keep after the container stops.
+
+**How it works:**
+
+| Location | Path |
+|----------|------|
+| Inside Docker | `/home/claude/outputs/` or `~/outputs/` |
+| On your Mac | `~/Documents/claude-docker-setup-v2/outputs/` |
+
+Files saved to `~/outputs/` inside the container automatically appear in your local `outputs/` folder.
+
+**Example usage:**
+
+```
+You:     "Create a scatterplot of this data and save it"
+Claude:  [creates plot, saves to ~/outputs/figure1.png]
+
+→ Check your local outputs/ folder — figure1.png is there
+```
+
+**Tip:** Tell Claude Code to save figures and exports to `~/outputs/`:
+
+```
+"Save all figures to ~/outputs/"
+"Export the results to ~/outputs/results.csv"
+```
+
+**Note:** The outputs folder is only mounted in GitHub mode. In local mode, you're working directly with your project files, so save anywhere in your project.
+
+---
+
+## Viewing Web UIs (Frontend Development)
+
+The run scripts expose ports 3000, 5173, and 8080 for web development. When Claude Code starts a development server inside Docker, you can view it in your Mac's browser.
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Your Mac                                           │
+│                                                     │
+│   Safari/Chrome                                     │
+│   └── http://localhost:3000  ◄──────────┐          │
+│                                          │          │
+│  ┌─────────────────────────────────────┐ │          │
+│  │  Docker Container                   │ │          │
+│  │                                     │ │          │
+│  │  Claude Code builds React app       │ │          │
+│  │  runs: npm run dev                  │ │          │
+│  │  server listening on port 3000 ─────┼─┘          │
+│  │                                     │            │
+│  └─────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────┘
+```
+
+**Workflow:**
+
+1. Ask Claude Code to create a web app (React, Vue, HTML, etc.)
+2. Claude starts the dev server (e.g., `npm run dev`)
+3. Open your browser to `http://localhost:3000` (or 5173/8080 depending on the framework)
+
+**Common ports:**
+
+| Port | Frameworks |
+|------|------------|
+| 3000 | React (Create React App), Next.js, Express |
+| 5173 | Vite (React, Vue, Svelte) |
+| 8080 | General web servers, Vue CLI |
+
+**Example:**
+
+```
+You:     "Create a simple React app with a counter button"
+Claude:  [creates app, runs npm run dev]
+Claude:  "Dev server running at http://localhost:5173"
+
+→ Open http://localhost:5173 in Safari/Chrome on your Mac
+```
+
+The browser connects through Docker's port mapping — you see the app running inside Docker, displayed in your real browser with full DevTools access.
+
+**If the browser can't connect,** make sure:
+1. The container was started with the current run.sh (which includes port mappings)
+2. No other container is using the same ports (see [Managing Containers](#managing-containers))
+3. The dev server is binding to `0.0.0.0`, not `127.0.0.1`. You can tell Claude: "Restart the dev server and bind to 0.0.0.0 instead of localhost"
+
+---
+
+## Building the Docker Image
+
+The Docker image is built automatically during initial setup. If you need to rebuild it (e.g., after modifying the Dockerfile to add new packages):
+
+```bash
+cd ~/Documents/claude-docker-setup-v2
+docker build --no-cache -t claude-code-docker . 2>&1 | tee build.log
+```
+
+The `--no-cache` flag ensures a fresh build. The build takes 15-30 minutes due to R package compilation.
+
+To verify the build succeeded:
+
+```bash
+docker run --rm claude-code-docker claude --version
+```
+
+If the build fails, check the log:
+
+```bash
+tail -50 build.log
+grep -iE "(error|fail)" build.log
+```
+
 ---
 
 ## What Software Is Available
@@ -594,6 +788,7 @@ Common packages pre-installed:
 
 - **Git** — version control
 - **GitHub CLI** — interact with GitHub
+- **Ruby & Jekyll** — static site generation
 - **Standard Unix tools** — grep, sed, awk, etc.
 
 ### Installing Additional Packages
@@ -610,128 +805,9 @@ install.packages("new_package")
 pip install new_package
 ```
 
-Note: These installations disappear when the container stops. To make them permanent, you'd need to edit the Dockerfile.
+Note: These installations disappear when the container stops. To make them permanent, edit the Dockerfile and rebuild the image (see [Building the Docker Image](#building-the-docker-image)).
 
 ---
-
-## Some additional notes on Docker
-
-### Building the Docker Image
-
-If you need to rebuild the Docker image (e.g., after modifying the Dockerfile):
-
-```bash
-cd ~/Documents/claude-docker-setup-v2
-docker build --no-cache -t claude-code-docker . 2>&1 | tee build.log
-```
-
-The `--no-cache` flag ensures a fresh build. The build takes 15-30 minutes due to R package compilation.
-
-To verify the build succeeded:
-
-```bash
-docker run --rm claude-code-docker claude --version
-```
-
----
-
-### Accessing the Docker Container Directly
-
-Sometimes you need to access the container's shell without going through Claude Code (e.g., to debug, install packages, or run commands manually).
-
-#### Option 1: Start a shell instead of Claude
-
-```bash
-docker run -it --rm \
-    -v "$PWD/auth/claude":/home/claude/.claude \
-    -v "$PWD/auth/gh":/home/claude/.config/gh \
-    claude-code-docker \
-    bash
-```
-
-#### Option 2: Open a second terminal into a running container
-
-First, find the container ID:
-
-```bash
-docker ps
-```
-
-Then connect to it:
-
-```bash
-docker exec -it <container-id> bash
-```
-
-**Important:** Don't use Ctrl+Z to background Docker - this suspends the container and can cause issues. Instead, open a new terminal window and use `docker exec`.
-
----
-
-### Outputs Folder
-
-The `outputs/` folder provides a way to save files from inside Docker to your Mac. This is useful for saving figures, reports, or any files you want to see while working, but you can eliminate this if needed for security on your computer. (Claude Code remains running only in the container.)
-
-**How it works:**
-
-| Location | Path |
-|----------|------|
-| Inside Docker | `/home/claude/outputs/` or `~/outputs/` |
-| On your Mac | `~/Documents/claude-docker-setup-v2/outputs/` |
-
-Files saved to `~/outputs/` inside the container automatically appear in your local `outputs/` folder.
-
-**Example usage:**
-
-```
-You: Create a scatterplot of this data and save it
-
-Claude: [creates plot, saves to ~/outputs/figure1.png]
-
-→ Check your local outputs/ folder - figure1.png is there
-```
-
-**Tip:** Tell Claude Code to save figures and exports to `~/outputs/`:
-
-```
-"Save all figures to ~/outputs/"
-"Export the results to ~/outputs/results.csv"
-```
-
-**Note:** The outputs folder is only mounted in GitHub mode. In local mode, you're working directly with your project files, so save anywhere in your project.
-
----
-
-### Viewing Web UIs (Frontend Development)
-
-The run scripts expose ports 3000, 5173, and 8080 for web development. When Claude Code starts a development server inside Docker, you can view it in your Mac's browser.
-
-**Workflow:**
-
-1. Ask Claude Code to create a web app (React, Vue, HTML, etc.)
-2. Claude starts the dev server (e.g., `npm run dev`)
-3. Open your browser to `http://localhost:3000` (or 5173/8080 depending on the framework)
-
-**Common ports:**
-
-| Port | Frameworks |
-|------|------------|
-| 3000 | React (Create React App), Next.js, Express |
-| 5173 | Vite (React, Vue, Svelte) |
-| 8080 | General web servers, Vue CLI |
-
-**Example:**
-
-```
-You: Create a UI for a model export.
-
-Claude: [creates app, runs npm run dev]
-Claude: Dev server running at http://localhost:5173
-
-→ Open http://localhost:5173 in Safari/Chrome on your Mac
-```
-
-The browser connects through Docker's port mapping - you see the app running inside Docker, displayed in your real browser with full DevTools access.
-
 
 ## Troubleshooting
 
@@ -754,6 +830,20 @@ chmod +x *.sh
 
 ```bash
 ./authenticate-github.sh
+```
+
+### "Port already allocated"
+
+Another container is still using the port. Stop it:
+
+```bash
+docker stop $(docker ps -q)
+```
+
+Then try again. Or use the port offset flag to use different ports:
+
+```bash
+./run.sh -p 1 <your-project>
 ```
 
 ### "Command not found: docker"
@@ -795,6 +885,11 @@ Check that:
 | Start Claude on a local folder | `./run.sh ~/path/to/folder` |
 | Give Claude a task to do alone | `./run-autonomous.sh <url-or-path> "task"` |
 | Work on a specific branch | `./run.sh https://github.com/user/repo branch-name` |
+| Run a second instance (different ports) | `./run.sh -p 1 <url-or-path>` |
+| Stop all containers | `docker stop $(docker ps -q)` |
+| See running containers | `docker ps` |
+| Drop into container shell | `docker exec -it <container-id> bash` |
+| Rebuild Docker image | `docker build --no-cache -t claude-code-docker .` |
 | Exit Claude | Type `/exit` or press Ctrl+D |
 | Exit the container | Type `exit` |
 
@@ -923,12 +1018,3 @@ Claude can install additional packages at runtime:
 # In R
 install.packages("new_package")
 ```
-
-```python
-# In Python
-pip install new_package
-```
-
-**Note:** Runtime installations disappear when the container stops. To make packages permanent, you would need to edit the Dockerfile and rebuild the image.
-
-

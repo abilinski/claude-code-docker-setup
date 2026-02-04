@@ -12,6 +12,12 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y \
+    ruby-full ruby-dev libyaml-dev libffi-dev zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN gem install bundler jekyll
+
+RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
